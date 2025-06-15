@@ -22,7 +22,7 @@ if plantilla_file and excel_file:
                 context = {
                     'nombre': row['Nombre'],
                     'dni': row['Tipo de documento'],
-                    'dninumero': str(row['Número de documento']).zfill(8),
+                    'dninumero': str(row['Número de documento']).zfill(9),
                     'fechaingreso': row['Fecha Ingreso'],
                     'cts': row['Cuenta CTS'],
                     'banco': row['Entidad CTS'],
