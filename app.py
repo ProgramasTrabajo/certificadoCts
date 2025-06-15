@@ -61,22 +61,17 @@ for archivo in os.listdir():
     if archivo.endswith(".docx") and archivo.startswith("CTS_"):
         os.system(f'libreoffice --headless --convert-to pdf "{archivo}" --outdir "."')
 
-            # Comprimir en ZIP
-            zip_buffer = BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
-                for file in os.listdir(certificados_dir):
-                    file_path = os.path.join(certificados_dir, file)
-                    zipf.write(file_path, arcname=file)
+from zipfile import ZipFile
 
-            zip_buffer.seek(0)
+nombre_zip = "BOLETA.zip"
 
-            # Descargar ZIP
-            st.success("✅ Certificados generados correctamente.")
-            st.download_button(
-                label="📦 Descargar ZIP con certificados",
-                data=zip_buffer,
-                file_name=f"certificados_cts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
-                mime="application/zip"
-            )
-else:
-    st.info("Por favor, sube el archivo Excel y la plantilla Word para continuar.")
+with ZipFile(nombre_zip, "w") as zipf:
+    for archivo in os.listdir():
+        if archivo.startswith("CTS_") and archivo.endswith(".docx"):
+            zipf.write(archivo)
+
+print("✅ ZIP creado:", nombre_zip)
+
+from IPython.display import FileLink
+FileLink(nombre_zip)
+
