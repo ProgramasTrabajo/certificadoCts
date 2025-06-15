@@ -33,14 +33,35 @@ if uploaded_excel and uploaded_template:
             os.makedirs(certificados_dir, exist_ok=True)
 
             # Generar certificados
-            for i, row in df.iterrows():
-                doc = DocxTemplate(template_path)
-                context = row.to_dict()
-                doc.render(context)
+for _, row in df.iterrows():
+    context = {
+        'nombre': row['Nombre'],
+        'dni': row['Tipo de documento'],
+        'dninumero': row['Número de documento'],
+        'fechaingreso': row['Fecha Ingreso'],
+        'cts': row['Cuenta CTS'],
+        'banco': row['Entidad CTS'],
+        'base': f"S/ {row['Sueldo Base']:.2f}",
+        'asfam': f"S/ {row['Asignacion Familiar']:.2f}",
+        'gra': f"S/ {row['Sexto Gratificacion']:.2f}",
+        'total': f"S/ {row['Base Calculo']:.2f}",
+        'mes': row['Meses'],
+        'mestot': f"S/ {row['Importe Meses']:.2f}",
+        'dias': row['Dias'],
+        'diatot': f"S/ {row['Importe Dias']:.2f}",
+  'totaldep': f"S/ {row['Total CTS']:.2f}",
+'importe': row['Letra'],
+    }
+    doc.render(context)
+    doc.save(f"CTS_0{row['Número de documento']}_05_2025.docx")
 
-                nombre_archivo = f"certificado_{i+1}_{context.get('NOMBRE', 'empleado')}.docx"
-                output_path = os.path.join(certificados_dir, nombre_archivo)
-                doc.save(output_path)
+!apt-get install -y libreoffice
+
+import os
+
+for archivo in os.listdir():
+    if archivo.endswith(".docx") and archivo.startswith("CTS_"):
+        os.system(f'libreoffice --headless --convert-to pdf "{archivo}" --outdir "."')
 
             # Comprimir en ZIP
             zip_buffer = BytesIO()
