@@ -22,7 +22,7 @@ if plantilla_file and excel_file:
                 context = {
                     'nombre': row['Nombre'],
                     'dni': row['Tipo de documento'],
-                    'dninumero': str(row['Número de documento']),
+                    'dninumero': str(row['Número de documento']).zfill(8),
                     'fechaingreso': row['Fecha Ingreso'],
                     'cts': row['Cuenta CTS'],
                     'banco': row['Entidad CTS'],
@@ -44,7 +44,7 @@ if plantilla_file and excel_file:
                 output = BytesIO()
                 doc.save(output)
                 output.seek(0)
-                filename = f"CTS_{str(row['Número de documento'])}_05_2025.docx"
+                filename = f"CTS_0{str(row['Número de documento']).zfill(8)}_05_2025.docx"
                 zipf.writestr(filename, output.read())
 
         buffer_zip.seek(0)
