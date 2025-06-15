@@ -44,7 +44,7 @@ if plantilla_file and excel_file:
                 output = BytesIO()
                 doc.save(output)
                 output.seek(0)
-                filename = f"CTS_{row['Número de documento']}_05_2025.pdf"
+                filename = f"CTS_{str(row['Número de documento'])}_05_2025.pdf"
                 zipf.writestr(filename, output.read())
 
         buffer_zip.seek(0)
