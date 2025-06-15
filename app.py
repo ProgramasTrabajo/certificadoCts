@@ -1,77 +1,54 @@
 import streamlit as st
 import pandas as pd
 from docxtpl import DocxTemplate
-import zipfile
 import os
-import tempfile
-from io import BytesIO
-from datetime import datetime
-from pathlib import Path
-
-# Título de la aplicación
-st.title("Generador de Certificados CTS")
-
-# Subida de archivos
-st.markdown("### 1. Sube los archivos necesarios")
-uploaded_excel = st.file_uploader("📄 Archivo Excel con datos de empleados", type=["xlsx"])
-uploaded_template = st.file_uploader("📄 Plantilla Word (.docx) del certificado", type=["docx"])
-
-# Botón para generar certificados
-if uploaded_excel and uploaded_template:
-    if st.button("🚀 Generar certificados"):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # Leer datos del Excel
-            df = pd.read_excel(uploaded_excel, engine="openpyxl")
-
-            # Cargar plantilla Word
-            template_path = os.path.join(tmpdir, "plantilla.docx")
-            with open(template_path, "wb") as f:
-                f.write(uploaded_template.read())
-
-            # Crear carpeta para certificados
-            certificados_dir = os.path.join(tmpdir, "certificados")
-            os.makedirs(certificados_dir, exist_ok=True)
-
-            # Generar certificados
-for _, row in df.iterrows():
-    context = {
-        'nombre': row['Nombre'],
-        'dni': row['Tipo de documento'],
-        'dninumero': row['Número de documento'],
-        'fechaingreso': row['Fecha Ingreso'],
-        'cts': row['Cuenta CTS'],
-        'banco': row['Entidad CTS'],
-        'base': f"S/ {row['Sueldo Base']:.2f}",
-        'asfam': f"S/ {row['Asignacion Familiar']:.2f}",
-        'gra': f"S/ {row['Sexto Gratificacion']:.2f}",
-        'total': f"S/ {row['Base Calculo']:.2f}",
-        'mes': row['Meses'],
-        'mestot': f"S/ {row['Importe Meses']:.2f}",
-        'dias': row['Dias'],
-        'diatot': f"S/ {row['Importe Dias']:.2f}",
-  'totaldep': f"S/ {row['Total CTS']:.2f}",
-'importe': row['Letra'],
-    }
-    doc.render(context)
-    doc.save(f"CTS_0{row['Número de documento']}_05_2025.docx")
-
-import os
-
-for archivo in os.listdir():
-    if archivo.endswith(".docx") and archivo.startswith("CTS_"):
-        os.system(f'libreoffice --headless --convert-to pdf "{archivo}" --outdir "."')
-
 from zipfile import ZipFile
+from io import BytesIO
 
-nombre_zip = "BOLETA.zip"
+st.set_page_config(page_title="Generador de CTS", layout="centered")
+st.title("📄 Generador de Certificados CTS")
 
-with ZipFile(nombre_zip, "w") as zipf:
-    for archivo in os.listdir():
-        if archivo.startswith("CTS_") and archivo.endswith(".docx"):
-            zipf.write(archivo)
+# 📁 Subida de archivos
+plantilla_file = st.file_uploader("📄 Cargar plantilla Word (.docx)", type="docx")
+excel_file = st.file_uploader("📊 Cargar archivo Excel (.xlsx)", type="xlsx")
 
-print("✅ ZIP creado:", nombre_zip)
+if plantilla_file and excel_file:
+    st.success("✅ Archivos cargados correctamente.")
 
-from IPython.display import FileLink
-FileLink(nombre_zip)
+    if st.button("🛠️ Generar certificados"):
+        df = pd.read_excel(excel_file, sheet_name="Datos Empleados")
+        buffer_zip = BytesIO()
 
+        with ZipFile(buffer_zip, "w") as zipf:
+            for _, row in df.iterrows():
+                context = {
+                    'nombre': row['Nombre'],
+                    'dni': row['Tipo de documento'],
+                    'dninumero': row['Número de documento'],
+                    'fechaingreso': row['Fecha Ingreso'],
+                    'cts': row['Cuenta CTS'],
+                    'banco': row['Entidad CTS'],
+                    'base': f"S/ {row['Sueldo Base']:.2f}",
+                    'asfam': f"S/ {row['Asignacion Familiar']:.2f}",
+                    'gra': f"S/ {row['Sexto Gratificacion']:.2f}",
+                    'total': f"S/ {row['Base Calculo']:.2f}",
+                    'mes': row['Meses'],
+                    'mestot': f"S/ {row['Importe Meses']:.2f}",
+                    'dias': row['Dias'],
+                    'diatot': f"S/ {row['Importe Dias']:.2f}",
+                    'totaldep': f"S/ {row['Total CTS']:.2f}",
+                    'importe': row['Letra'],
+                }
+
+                doc = DocxTemplate(plantilla_file)
+                doc.render(context)
+
+                nombre_archivo = f"CTS_{row['Número de documento']}_05_2025.docx"
+                temp_output = BytesIO()
+                doc.save(temp_output)
+                temp_output.seek(0)
+                zipf.writestr(nombre_archivo, temp_output.read())
+
+        buffer_zip.seek(0)
+        st.success("🎉 Certificados generados correctamente.")
+        st.download_button("⬇️ Descargar ZIP", buffer_zip, file_name="certificados_cts.zip", mime="application/zip")
