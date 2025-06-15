@@ -55,8 +55,6 @@ for _, row in df.iterrows():
     doc.render(context)
     doc.save(f"CTS_0{row['Número de documento']}_05_2025.docx")
 
-!apt-get install -y libreoffice
-
 import os
 
 for archivo in os.listdir():
