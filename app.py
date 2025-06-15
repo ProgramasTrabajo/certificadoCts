@@ -1,64 +1,51 @@
+import streamlit as st
 import pandas as pd
 from docxtpl import DocxTemplate
-import os
-import subprocess
 from zipfile import ZipFile
-from datetime import datetime
+from io import BytesIO
 
-# Rutas
-archivo_excel = "Boletas_de_Pago.xlsx"
-plantilla_word = "CERTIFICADO CTS.docx"
-output_folder = "certificados"
-pdf_folder = "certificados_pdf"
-zip_name = "certificados_pdf.zip"
+st.set_page_config(page_title="Generador CTS", layout="centered")
+st.title("📄 Generador de Certificados CTS")
 
-# Crear carpetas si no existen
-os.makedirs(output_folder, exist_ok=True)
-os.makedirs(pdf_folder, exist_ok=True)
+plantilla_file = st.file_uploader("📄 Subir plantilla Word (.docx)", type="docx")
+excel_file = st.file_uploader("📊 Subir archivo Excel (.xlsx)", type="xlsx")
 
-# Leer Excel
-df = pd.read_excel(archivo_excel, sheet_name="Datos Empleados")
+if plantilla_file and excel_file:
+    st.success("✅ Archivos cargados correctamente.")
 
-# Generar archivos Word
-for _, row in df.iterrows():
-    context = {
-        'nombre': row['Nombre'],
-        'dni': row['Tipo de documento'],
-        'dninumero': str(row['Número de documento']).zfill(8),
-        'fechaingreso': row['Fecha Ingreso'],
-        'cts': row['Cuenta CTS'],
-        'banco': row['Entidad CTS'],
-        'base': f"S/ {row['Sueldo Base']:.2f}",
-        'asfam': f"S/ {row['Asignacion Familiar']:.2f}",
-        'gra': f"S/ {row['Sexto Gratificacion']:.2f}",
-        'total': f"S/ {row['Base Calculo']:.2f}",
-        'mes': row['Meses'],
-        'mestot': f"S/ {row['Importe Meses']:.2f}",
-        'dias': row['Dias'],
-        'diatot': f"S/ {row['Importe Dias']:.2f}",
-        'totaldep': f"S/ {row['Total CTS']:.2f}",
-        'importe': row['Letra'],
-    }
+    if st.button("🛠️ Generar certificados"):
+        df = pd.read_excel(excel_file, sheet_name="Datos Empleados")
+        buffer_zip = BytesIO()
 
-    doc = DocxTemplate(plantilla_word)
-    filename = f"CTS_0{str(row['Número de documento']).zfill(8)}_05_2025.docx"
-    ruta_docx = os.path.join(output_folder, nombre_archivo)
-    doc.render(context)
-    doc.save(ruta_docx)
+        with ZipFile(buffer_zip, "w") as zipf:
+            for _, row in df.iterrows():
+                context = {
+                    'nombre': row['Nombre'],
+                    'dni': row['Tipo de documento'],
+                    'dninumero': str(row['Número de documento']).zfill(8),
+                    'fechaingreso': row['Fecha Ingreso'],
+                    'cts': row['Cuenta CTS'],
+                    'banco': row['Entidad CTS'],
+                    'base': f"S/ {row['Sueldo Base']:.2f}",
+                    'asfam': f"S/ {row['Asignacion Familiar']:.2f}",
+                    'gra': f"S/ {row['Sexto Gratificacion']:.2f}",
+                    'total': f"S/ {row['Base Calculo']:.2f}",
+                    'mes': row['Meses'],
+                    'mestot': f"S/ {row['Importe Meses']:.2f}",
+                    'dias': row['Dias'],
+                    'diatot': f"S/ {row['Importe Dias']:.2f}",
+                    'totaldep': f"S/ {row['Total CTS']:.2f}",
+                    'importe': row['Letra'],
+                }
 
-    # Convertir a PDF con LibreOffice
-    subprocess.run([
-        "libreoffice",
-        "--headless",
-        "--convert-to", "pdf",
-        "--outdir", pdf_folder,
-        ruta_docx
-    ])
+                doc = DocxTemplate(plantilla_file)
+                doc.render(context)
 
-# Crear ZIP con todos los PDFs
-with ZipFile(zip_name, "w") as zipf:
-    for filename in os.listdir(pdf_folder):
-        if filename.endswith(".pdf"):
-            zipf.write(os.path.join(pdf_folder, filename), filename)
+                output = BytesIO()
+                doc.save(output)
+                output.seek(0)
+                filename = f"CTS_0{str(row['Número de documento']).zfill(8)}_05_2025.docx"
+                zipf.writestr(filename, output.read())
 
-print(f"✅ Certificados generados y convertidos a PDF. ZIP listo: {zip_name}")
+        buffer_zip.seek(0)
+        st.download_button("⬇️ Descargar certificados en ZIP", buffer_zip, file_name="certificados_cts.zip", mime="application/zip")
